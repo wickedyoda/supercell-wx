@@ -1,0 +1,19 @@
+# Supercell Wx Code Owners
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Android Port Maintainers
+# Changes to android-specific code require review from Android team
+/scwx-qt/android/ @dpaulat
+/tools/conan/profiles/scwx-android* @dpaulat
+/tools/setup-android.sh @dpaulat
+/docs/ANDROID*.md @dpaulat
+/.github/workflows/ci.yml @dpaulat
+
+# Repository Configuration
+/.github/ @dpaulat
+/CMakeLists.txt @dpaulat
+/conanfile.py @dpaulat
+
+# Build Configuration & Tools
+/tools/ @dpaulat
+CMakePresets.json @dpaulat
