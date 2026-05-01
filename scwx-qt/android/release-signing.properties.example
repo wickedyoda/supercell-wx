@@ -1,0 +1,7 @@
+# Copy this file to release-signing.properties and fill in your release keystore values.
+# Do not commit the real file.
+
+storeFile=/absolute/path/to/supercell-wx-release.jks
+storePassword=changeit
+keyAlias=supercellwx
+keyPassword=changeit
