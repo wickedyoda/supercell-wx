@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'develop'
+      - 'android-port-build'
   pull_request:
     branches:
       - 'develop'
@@ -16,6 +17,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref_name == 'develop' || github.event_name == 'pull_request' }}
     strategy:
       fail-fast: false
       matrix:
@@ -453,6 +455,7 @@ jobs:
         path: ${{ github.workspace }}/build/Testing/
 
   android-build:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref_name == 'android-port-build' }}
     name: android_x86_64_emulator
     runs-on: ubuntu-24.04
     env:
