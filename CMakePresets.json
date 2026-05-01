@@ -476,6 +476,102 @@
       }
     },
     {
+      "name": "android-base",
+      "inherits": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_SYSTEM_NAME": "Android",
+        "CMAKE_SYSTEM_VERSION": "33"
+      }
+    },
+    {
+      "name": "android-arm64-v8a-base",
+      "inherits": "android-base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_ANDROID_ABI": "arm64-v8a",
+        "CMAKE_ANDROID_PLATFORM": "android-33"
+      }
+    },
+    {
+      "name": "android-armeabi-v7a-base",
+      "inherits": "android-base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_ANDROID_ABI": "armeabi-v7a",
+        "CMAKE_ANDROID_PLATFORM": "android-33"
+      }
+    },
+    {
+      "name": "android-x86_64-base",
+      "inherits": "android-base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_ANDROID_ABI": "x86_64",
+        "CMAKE_ANDROID_PLATFORM": "android-33"
+      }
+    },
+    {
+      "name": "android-arm64-v8a-release",
+      "inherits": "android-arm64-v8a-base",
+      "displayName": "Android ARM64-v8a Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CONAN_HOST_PROFILE": "scwx-android_arm64-v8a",
+        "CONAN_BUILD_PROFILE": "scwx-android_arm64-v8a"
+      }
+    },
+    {
+      "name": "android-arm64-v8a-debug",
+      "inherits": "android-arm64-v8a-base",
+      "displayName": "Android ARM64-v8a Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CONAN_HOST_PROFILE": "scwx-android_arm64-v8a-debug",
+        "CONAN_BUILD_PROFILE": "scwx-android_arm64-v8a-debug"
+      }
+    },
+    {
+      "name": "android-armeabi-v7a-release",
+      "inherits": "android-armeabi-v7a-base",
+      "displayName": "Android ARMeabi-v7a Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CONAN_HOST_PROFILE": "scwx-android_armeabi-v7a",
+        "CONAN_BUILD_PROFILE": "scwx-android_armeabi-v7a"
+      }
+    },
+    {
+      "name": "android-armeabi-v7a-debug",
+      "inherits": "android-armeabi-v7a-base",
+      "displayName": "Android ARMeabi-v7a Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CONAN_HOST_PROFILE": "scwx-android_armeabi-v7a-debug",
+        "CONAN_BUILD_PROFILE": "scwx-android_armeabi-v7a-debug"
+      }
+    },
+    {
+      "name": "android-x86_64-release",
+      "inherits": "android-x86_64-base",
+      "displayName": "Android x86_64 Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CONAN_HOST_PROFILE": "scwx-android_x86_64",
+        "CONAN_BUILD_PROFILE": "scwx-android_x86_64"
+      }
+    },
+    {
+      "name": "android-x86_64-debug",
+      "inherits": "android-x86_64-base",
+      "displayName": "Android x86_64 Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CONAN_HOST_PROFILE": "scwx-android_x86_64-debug",
+        "CONAN_BUILD_PROFILE": "scwx-android_x86_64-debug"
+      }
+    },
+    {
       "name": "macos-base",
       "inherits": "base",
       "hidden": true,
@@ -654,6 +750,42 @@
       "configurePreset": "macos-clang18-arm64-release",
       "displayName": "macOS Clang 18 Arm64 Release",
       "configuration": "Release"
+    },
+    {
+      "name": "android-arm64-v8a-release",
+      "configurePreset": "android-arm64-v8a-release",
+      "displayName": "Android ARM64-v8a Release",
+      "configuration": "Release"
+    },
+    {
+      "name": "android-arm64-v8a-debug",
+      "configurePreset": "android-arm64-v8a-debug",
+      "displayName": "Android ARM64-v8a Debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "android-armeabi-v7a-release",
+      "configurePreset": "android-armeabi-v7a-release",
+      "displayName": "Android ARMeabi-v7a Release",
+      "configuration": "Release"
+    },
+    {
+      "name": "android-armeabi-v7a-debug",
+      "configurePreset": "android-armeabi-v7a-debug",
+      "displayName": "Android ARMeabi-v7a Debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "android-x86_64-release",
+      "configurePreset": "android-x86_64-release",
+      "displayName": "Android x86_64 Release",
+      "configuration": "Release"
+    },
+    {
+      "name": "android-x86_64-debug",
+      "configurePreset": "android-x86_64-debug",
+      "displayName": "Android x86_64 Debug",
+      "configuration": "Debug"
     }
   ],
   "testPresets": [

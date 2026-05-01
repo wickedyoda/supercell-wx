@@ -697,6 +697,24 @@ elseif (APPLE)
                           MACOSX_BUNDLE_ICON_FILE            "scwx.icns"
                           MACOSX_BUNDLE_INFO_STRING          "Free and open source advanced weather radar"
                           RESOURCE                           ${SCWX_ICON})
+elseif (ANDROID)
+    qt_add_executable(supercell-wx ${EXECUTABLE_SOURCES})
+
+    # Set Android app properties
+    set_target_properties(supercell-wx PROPERTIES
+        QT_QML_MODULE_VERSION 1.0
+        QT_QML_MODULE_URI net.supercellwx.app
+        ANDROID_PACKAGE_SOURCE_DIR "${scwx-qt_SOURCE_DIR}/android"
+        ANDROID_MIN_SDK_VERSION 33
+        ANDROID_TARGET_SDK_VERSION 34
+    )
+
+    # Copy Android manifest and resources if they exist
+    if (EXISTS "${scwx-qt_SOURCE_DIR}/android")
+        message(STATUS "Using Android package source: ${scwx-qt_SOURCE_DIR}/android")
+    else()
+        message(WARNING "Android package source directory not found: ${scwx-qt_SOURCE_DIR}/android")
+    endif()
 else()
     qt_add_executable(supercell-wx ${EXECUTABLE_SOURCES})
 endif()
