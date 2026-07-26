@@ -626,9 +626,10 @@ jobs:
     name: android_x86_64_emulator
     runs-on: ubuntu-24.04
     env:
-      SCWX_VERSION: v0.5.6
+      SCWX_VERSION: v0.6.1
       ANDROID_API_LEVEL: "33"
       ANDROID_ABI: x86_64
+      ANDROID_HOME: /usr/local/lib/android/sdk
     steps:
     - name: Setup
       run: git config --global core.longpaths true
@@ -643,7 +644,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: temurin
-        java-version: '11'
+        java-version: '21'
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
@@ -651,14 +652,19 @@ jobs:
     - name: Install Android SDK Components
       shell: bash
       run: |
-        yes | sdkmanager "platforms;android-33" "build-tools;34.0.0" "platform-tools"
+        set -euo pipefail
+        yes | sdkmanager --licenses || true
+        yes | sdkmanager \
+          "platform-tools" \
+          "platforms;android-${ANDROID_API_LEVEL}" \
+          "build-tools;34.0.0"
 
     - name: Install Qt for Android
       uses: jdpurcell/install-qt-action@v5
       env:
         AQT_CONFIG: ${{ github.workspace }}/source/tools/aqt-settings.ini
       with:
-        version: 6.11.0
+        version: 6.11.1
         arch: android_x86_64
         modules: qtimageformats qtmultimedia qtpositioning qtserialport
         tools: ''
@@ -671,7 +677,7 @@ jobs:
         pip install conan
 
     - name: Cache Conan Packages
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: ~/.conan2
         key: android-build-v2-${{ hashFiles('./source/conanfile.py', './source/tools/conan/profiles/scwx-android_*') }}
@@ -731,7 +737,7 @@ jobs:
         script: |
           adb install -r "${{ steps.locate_apk.outputs.apk_path }}"
           adb shell pm list packages | grep net.supercellwx.app
-          adb shell am start -W -n net.supercellwx.app/org.qtproject.qt.android.bindings.QtActivity
+          adb shell am start -W -n net.supercellwx.app/org.qtproject.qt.android.QtActivity
           adb shell pidof net.supercellwx.app
 
     - name: Collect emulator logcat
