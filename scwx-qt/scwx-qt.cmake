@@ -751,8 +751,6 @@ elseif (ANDROID)
 
     # Set Android app properties
     set_target_properties(supercell-wx PROPERTIES
-        QT_QML_MODULE_VERSION 1.0
-        QT_QML_MODULE_URI net.supercellwx.app
         ANDROID_PACKAGE_SOURCE_DIR "${scwx-qt_SOURCE_DIR}/android"
         ANDROID_MIN_SDK_VERSION 33
         ANDROID_TARGET_SDK_VERSION 34
