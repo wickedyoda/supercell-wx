@@ -1,0 +1,117 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'android-port-build'
+
+jobs:
+  android-apk:
+    name: android_x86_64_apk
+    runs-on: ubuntu-24.04
+    env:
+      SCWX_VERSION: v0.5.6
+      ANDROID_API_LEVEL: "33"
+      ANDROID_ABI: x86_64
+
+    steps:
+      - name: Setup
+        run: git config --global core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          path: source
+          submodules: recursive
+
+      - name: Install Git LFS
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq git-lfs
+          git lfs install
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK Components
+        shell: bash
+        run: |
+          yes | sdkmanager "platforms;android-33" "build-tools;34.0.0" "platform-tools"
+
+      - name: Install Qt for Android
+        uses: jdpurcell/install-qt-action@v5
+        env:
+          AQT_CONFIG: ${{ github.workspace }}/source/tools/aqt-settings.ini
+        with:
+          version: 6.11.1
+          arch: android_x86_64
+          modules: qtimageformats qtmultimedia qtpositioning qtserialport
+          tools: ''
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e
+
+      - name: Setup Python Environment
+        shell: bash
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install conan
+
+      - name: Install Conan Packages
+        shell: bash
+        run: |
+          cd source
+          conan config install ./tools/conan/profiles -tf profiles
+          conan install . \
+            --remote conancenter \
+            --build missing \
+            --profile:all scwx-android_x86_64 \
+            --settings:all build_type=Release \
+            --output-folder ./build/conan/
+
+      - name: Configure Android Build
+        shell: bash
+        run: |
+          cd source
+          cmake --preset android-x86_64-release
+
+      - name: Build Android Client
+        shell: bash
+        run: |
+          cmake --build source/build/android-x86_64-release --target supercell-wx
+
+      - name: Package Android APK
+        shell: bash
+        run: |
+          ANDROIDDEPLOYQT=$(find "${RUNNER_WORKSPACE}/Qt" -type f -name androiddeployqt | head -n1)
+          if [[ -z "$ANDROIDDEPLOYQT" ]]; then
+            echo "androiddeployqt not found"
+            exit 1
+          fi
+          "$ANDROIDDEPLOYQT" \
+            --input source/build/android-x86_64-release/AndroidDeploymentSettings.json \
+            --output source/build/android-x86_64-release/android-build \
+            --android-platform android-33 \
+            --release \
+            --apk
+
+      - name: Locate APK
+        id: locate_apk
+        shell: bash
+        run: |
+          APK_PATH=$(find source/build/android-x86_64-release/android-build -name "*.apk" | head -n1 || true)
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: supercell-wx-android-apk
+          path: |
+            source/build/android-x86_64-release/android-build/**/*.apk
+            source/build/android-x86_64-release/android-build/**/*.aab
+            source/build/android-x86_64-release/android-build/**/*.so
