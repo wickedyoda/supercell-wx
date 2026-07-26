@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
+        <file>gl/annotation_geo.vert</file>
+        <file>gl/annotation_stroke.frag</file>
         <file>gl/color.frag</file>
         <file>gl/color.vert</file>
         <file>gl/geo_line.vert</file>
@@ -15,6 +17,8 @@
         <file>gl/threshold.geom</file>
         <file>res/audio/wikimedia/Emergency_Alert_System_Attention_Signal_20s.ogg</file>
         <file>res/config/radar_sites.json</file>
+        <file>res/config/radars_iastate.gis</file>
+        <file>res/config/radars_weatherpulse.gis</file>
         <file>res/fonts/din1451alt.ttf</file>
         <file>res/fonts/din1451alt_g.ttf</file>
         <file>res/fonts/Inconsolata-Regular.ttf</file>
@@ -95,5 +99,6 @@
         <file>res/textures/images/location-marker.svg</file>
         <file>res/textures/images/mapbox-logo.svg</file>
         <file>res/textures/images/maptiler-logo.svg</file>
+        <file>res/textures/images/openfreemap-logo.jpg</file>
     </qresource>
 </RCC>

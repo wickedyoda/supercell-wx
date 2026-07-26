@@ -2,6 +2,7 @@
 #include <scwx/qt/manager/radar_product_manager.hpp>
 #include <scwx/qt/settings/general_settings.hpp>
 #include <scwx/qt/util/queue_counter.hpp>
+#include <scwx/common/sites.hpp>
 #include <scwx/util/logger.hpp>
 #include <scwx/util/map.hpp>
 #include <scwx/util/time.hpp>
@@ -122,6 +123,11 @@ std::chrono::system_clock::time_point TimelineManager::GetSelectedTime() const
    return p->selectedTime_;
 }
 
+types::MapTime TimelineManager::GetViewType() const
+{
+   return p->viewType_;
+}
+
 void TimelineManager::SetMapCount(std::size_t mapCount)
 {
    p->mapCount_ = mapCount;
@@ -129,15 +135,18 @@ void TimelineManager::SetMapCount(std::size_t mapCount)
 
 void TimelineManager::SetRadarSite(const std::string& radarSite)
 {
-   if (p->radarSite_ == radarSite)
+   const std::string canonicalRadarSite =
+      common::GetCanonicalRadarId(radarSite);
+
+   if (p->radarSite_ == canonicalRadarSite)
    {
       // No action needed
       return;
    }
 
-   logger_->debug("SetRadarSite: {}", radarSite);
+   logger_->debug("SetRadarSite: {}", canonicalRadarSite);
 
-   p->radarSite_ = radarSite;
+   p->radarSite_ = canonicalRadarSite;
 
    if (p->viewType_ == types::MapTime::Live)
    {
@@ -180,7 +189,16 @@ void TimelineManager::SetViewType(types::MapTime viewType)
    }
    else
    {
-      // If the selected view type is archive, select using the pinned time
+      // If the selected view type is archive, select using the pinned time.
+      // A default time of {} is treated as "live" by SelectTime; when first
+      // switching to archive the dock may not have emitted a date yet, so
+      // pin to the current wall-clock time (minute resolution) so the UI
+      // shows archive time instead of "Live".
+      if (p->pinnedTime_ == std::chrono::system_clock::time_point {})
+      {
+         p->pinnedTime_ =
+            std::chrono::floor<std::chrono::minutes>(scwx::util::time::now());
+      }
       p->SelectTimeAsync(p->pinnedTime_);
    }
 
@@ -474,20 +492,29 @@ void TimelineManager::Impl::PlaySync()
    // Unlock prior to selecting time
    lock.unlock();
 
-   // Lock radar sweep monitor
-   std::unique_lock radarSweepMonitorLock {radarSweepMonitorMutex_};
-
-   // Reset radar sweep monitor in preparation for update
-   RadarSweepMonitorReset();
-
-   // Select the time
    auto selectTimeStart = std::chrono::steady_clock::now();
-   SelectTime(newTime);
+   if (radarSite_.empty())
+   {
+      // No radar product: sweeps will not complete the monitor; skip the wait
+      // so play advances at the configured loop rate instead of timing out.
+      SelectTime(newTime);
+   }
+   else
+   {
+      // Lock radar sweep monitor
+      std::unique_lock radarSweepMonitorLock {radarSweepMonitorMutex_};
+
+      // Reset radar sweep monitor in preparation for update
+      RadarSweepMonitorReset();
+
+      // Select the time
+      SelectTime(newTime);
+
+      // Wait for radar sweeps to update
+      RadarSweepMonitorWait(radarSweepMonitorLock);
+   }
    auto selectTimeEnd = std::chrono::steady_clock::now();
    auto elapsedTime   = selectTimeEnd - selectTimeStart;
-
-   // Wait for radar sweeps to update
-   RadarSweepMonitorWait(radarSweepMonitorLock);
 
    // Calculate the interval until the next update, prior to selecting
    std::chrono::milliseconds interval;
@@ -558,6 +585,8 @@ std::pair<bool, bool> TimelineManager::Impl::SelectTime(
    }
    else if (selectedTime == std::chrono::system_clock::time_point {})
    {
+      std::unique_lock const lock {selectTimeMutex_};
+
       // If a default time point is given, reset to a live view
       selectedTime_      = selectedTime;
       adjustedTime_      = selectedTime;
@@ -566,6 +595,25 @@ std::pair<bool, bool> TimelineManager::Impl::SelectTime(
       logger_->debug("Time updated: Live");
 
       Q_EMIT self_->LiveStateUpdated(true);
+      Q_EMIT self_->VolumeTimeUpdated(selectedTime);
+      Q_EMIT self_->SelectedTimeUpdated(selectedTime);
+
+      volumeTimeUpdated   = true;
+      selectedTimeUpdated = true;
+
+      return {volumeTimeUpdated, selectedTimeUpdated};
+   }
+
+   if (radarSite_.empty())
+   {
+      std::unique_lock const lock {selectTimeMutex_};
+
+      adjustedTime_      = selectedTime;
+      selectedTime_      = selectedTime;
+      previousRadarSite_ = radarSite_;
+
+      Q_EMIT self_->LiveStateUpdated(selectedTime ==
+                                     std::chrono::system_clock::time_point {});
       Q_EMIT self_->VolumeTimeUpdated(selectedTime);
       Q_EMIT self_->SelectedTimeUpdated(selectedTime);
 
@@ -673,6 +721,27 @@ void TimelineManager::Impl::Step(Direction direction)
 
    // Unlock prior to selecting time
    lock.unlock();
+
+   if (radarSite_.empty())
+   {
+      // No radar: apply a single one-minute step without waiting for sweeps
+      // that will never be recorded as complete.
+      using namespace std::chrono_literals;
+      if (direction == Direction::Back)
+      {
+         newTime -= 1min;
+      }
+      else
+      {
+         newTime += 1min;
+         if (newTime > scwx::util::time::now() + 2min)
+         {
+            return;
+         }
+      }
+      SelectTime(newTime);
+      return;
+   }
 
    // Lock radar sweep monitor
    std::unique_lock radarSweepMonitorLock {radarSweepMonitorMutex_};

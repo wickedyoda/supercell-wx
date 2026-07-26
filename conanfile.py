@@ -5,26 +5,26 @@ import os
 
 class SupercellWxConan(ConanFile):
     settings   = ("os", "compiler", "build_type", "arch")
-    requires   = ("boost/1.90.0",
+    requires   = ("boost/1.91.0",
                   "cpr/1.14.2",
                   "fontconfig/2.17.1",
                   "geographiclib/2.6",
-                  "geos/3.13.0",
-                  "glm/1.0.1",
+                  "geos/3.14.1",
+                  "glm/1.0.3",
                   "gtest/1.17.0",
-                  "libcurl/8.17.0",
+                  "libcurl/8.21.0",
                   "libjpeg/9f",
-                  "libpng/1.6.54",
+                  "libpng/1.6.58",
                   "libtiff/4.7.1",
-                  "libxml2/2.15.1",
+                  "libxml2/2.15.3",
                   "libzip/1.11.4",
-                  "openssl/3.6.0",
+                  "openssl/3.6.3",
                   "range-v3/cci.20240905",
                   "re2/20251105",
                   "spdlog/1.17.0",
-                  "sqlite3/3.51.0",
-                  "vulkan-loader/1.4.313.0",
-                  "zlib/1.3.1")
+                  "sqlite3/3.53.3",
+                  "vulkan-loader/1.4.350.0",
+                  "zlib/1.3.2")
     generators = ("CMakeDeps")
     default_options = {"boost/*:without_cobalt" : True,
                        "geos/*:shared"          : True,
@@ -48,10 +48,10 @@ class SupercellWxConan(ConanFile):
         if self.settings.os == "Linux":
             self.requires("opengl/system")
             self.requires("glu/system")
-            self.requires("onetbb/2022.3.0")
+            self.requires("onetbb/2023.0.0")
 
         # Force dependency graph (fontconfig) to use a newer version of freetype
-        self.requires("freetype/2.14.1", force=True)
+        self.requires("freetype/2.14.3", force=True)
 
     def generate(self):
         build_folder = os.path.join(self.build_folder,

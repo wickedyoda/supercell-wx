@@ -6,6 +6,7 @@
 #include <scwx/qt/config/county_database.hpp>
 #include <scwx/qt/config/radar_site.hpp>
 #include <scwx/qt/main/application_paths.hpp>
+#include <scwx/qt/main/theme.hpp>
 #include <scwx/qt/manager/media_manager.hpp>
 #include <scwx/qt/manager/position_manager.hpp>
 #include <scwx/qt/manager/settings_manager.hpp>
@@ -738,12 +739,59 @@ void SettingsDialogImpl::SetupGeneralTab()
    mapTilerApiKey_.SetResetButton(self_->ui->resetMapTilerApiKeyButton);
    mapTilerApiKey_.EnableTrimming();
 
+   QObject::connect(self_->ui->mapProviderComboBox,
+                    &QComboBox::currentTextChanged,
+                    self_,
+                    [this](const QString& text)
+                    {
+                       const map::MapProvider mapProvider =
+                          map::GetMapProvider(text.toStdString());
+                       const bool providerHasLocalFiles =
+                          mapProvider == map::MapProvider::OpenFreeMap;
+                       self_->ui->customMapUrlToolButton->setEnabled(
+                          providerHasLocalFiles);
+                    });
+
    customStyleUrl_.SetSettingsVariable(generalSettings.custom_style_url());
    customStyleUrl_.SetEditWidget(self_->ui->customMapUrlLineEdit);
    customStyleUrl_.SetResetButton(self_->ui->resetCustomMapUrlButton);
    customStyleUrl_.SetInvalidTooltip(
       "Remove anything following \"?key=\" in the URL");
    customStyleUrl_.EnableTrimming();
+   QObject::connect(
+      self_->ui->customMapUrlToolButton,
+      &QAbstractButton::clicked,
+      self_,
+      [this]()
+      {
+         static const std::string styleFilter = "Map Style (*.json)";
+         static const std::string allFilter   = "All Files (*)";
+
+         // WA_DeleteOnClose manages memory
+         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+         auto dialog = new QFileDialog(self_);
+         dialog->setAttribute(Qt::WA_DeleteOnClose);
+         dialog->setFileMode(QFileDialog::ExistingFile);
+         dialog->setNameFilters(
+            {QObject::tr(styleFilter.c_str()), QObject::tr(allFilter.c_str())});
+
+         QObject::connect(dialog,
+                          &QFileDialog::fileSelected,
+                          self_,
+                          [this](const QString& file)
+                          {
+                             const QString path =
+                                QDir::toNativeSeparators(file);
+
+                             logger_->info("Selected Custom Style URL file: {}",
+                                           path.toStdString());
+
+                             self_->ui->customMapUrlLineEdit->setText(path);
+                             // setText does not emit the textEdited signal
+                             self_->ui->customMapUrlLineEdit->textEdited(path);
+                          });
+         dialog->open();
+      });
 
    customStyleDrawLayer_.SetSettingsVariable(
       generalSettings.custom_style_draw_layer());
@@ -1611,16 +1659,28 @@ void SettingsDialogImpl::ApplyChanges()
 {
    logger_->info("Applying settings changes");
 
-   bool committed = false;
+   bool committed    = false;
+   bool themeUpdated = false;
 
    for (auto& setting : settings_)
    {
-      committed |= setting->Commit();
+      const bool settingCommitted = setting->Commit();
+
+      committed |= settingCommitted;
+      if (settingCommitted && (setting == &theme_ || setting == &themeFile_))
+      {
+         themeUpdated = true;
+      }
    }
 
    for (auto& page : settingsPages_)
    {
       committed |= page->CommitChanges();
+   }
+
+   if (themeUpdated)
+   {
+      main::ApplyTheme();
    }
 
    if (committed)
