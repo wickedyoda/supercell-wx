@@ -39,11 +39,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4.0.0
-
-      - name: Install Android SDK Components
-        shell: bash
-        run: |
-          yes | sdkmanager "platforms;android-33" "build-tools;34.0.0" "platform-tools"
+        with:
+          cmdline-tools-version: 14742923
+          accept-android-sdk-licenses: true
+          packages: "platforms;android-33 build-tools;34.0.0 platform-tools"
 
       - name: Install Qt for Android
         uses: jdpurcell/install-qt-action@v5
