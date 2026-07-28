@@ -634,7 +634,7 @@ jobs:
       run: git config --global core.longpaths true
 
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         path: source
         submodules: recursive
@@ -671,7 +671,7 @@ jobs:
         pip install conan
 
     - name: Cache Conan Packages
-      uses: actions/cache@v5
+      uses: actions/cache@v4
       with:
         path: ~/.conan2
         key: android-build-v2-${{ hashFiles('./source/conanfile.py', './source/tools/conan/profiles/scwx-android_*') }}
@@ -731,7 +731,7 @@ jobs:
         script: |
           adb install -r "${{ steps.locate_apk.outputs.apk_path }}"
           adb shell pm list packages | grep net.supercellwx.app
-          adb shell am start -W -n net.supercellwx.app/org.qtproject.qt.android.bindings.QtActivity
+          adb shell am start -W -n net.supercellwx.app/org.qtproject.qt.android.QtActivity
           adb shell pidof net.supercellwx.app
 
     - name: Collect emulator logcat
