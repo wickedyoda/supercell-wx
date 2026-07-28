@@ -643,7 +643,7 @@ jobs:
       uses: actions/setup-java@v4.2.0
       with:
         distribution: temurin
-        java-version: '11'
+        java-version: '17'
 
     - name: Setup Android SDK
       uses: android-actions/setup-android@v4.0.0
