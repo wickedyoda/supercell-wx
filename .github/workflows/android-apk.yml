@@ -32,13 +32,13 @@ jobs:
           git lfs install
 
       - name: Install Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4.2.0
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.0
 
       - name: Install Android SDK Components
         shell: bash
