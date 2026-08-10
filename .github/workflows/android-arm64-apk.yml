@@ -42,7 +42,7 @@ jobs:
         with:
           cmdline-tools-version: 14742923
           accept-android-sdk-licenses: true
-          packages: "platforms;android-33 build-tools;34.0.0 platform-tools ndk;27.0.12277971"
+          packages: "platforms;android-33 build-tools;34.0.0 platform-tools ndk;29.0.14206865"
 
       - name: Set ANDROID_NDK_HOME
         shell: bash
