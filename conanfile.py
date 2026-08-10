@@ -43,6 +43,13 @@ class SupercellWxConan(ConanFile):
             self.options["openssl"].shared    = True
             self.options["libcurl"].ca_bundle = "none"
             self.options["libcurl"].ca_path   = "none"
+        elif self.settings.os == "Android":
+            # Android uses OpenSSL via Conan; disable desktop-specific SSL options
+            self.options["openssl"].shared    = True
+            self.options["libcurl"].ca_bundle = "none"
+            self.options["libcurl"].ca_path   = "none"
+            # Vulkan-loader is desktop-specific; disable on Android
+            self.options["vulkan-loader"].shared = False
 
     def requirements(self):
         if self.settings.os == "Linux":

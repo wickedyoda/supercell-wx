@@ -11,7 +11,7 @@ jobs:
     name: android_x86_64_apk
     runs-on: ubuntu-24.04
     env:
-      SCWX_VERSION: v0.5.6
+      SCWX_VERSION: v0.6.1
       ANDROID_API_LEVEL: "33"
       ANDROID_ABI: x86_64
 
@@ -42,7 +42,13 @@ jobs:
         with:
           cmdline-tools-version: 14742923
           accept-android-sdk-licenses: true
-          packages: "platforms;android-33 build-tools;34.0.0 platform-tools"
+          packages: "platforms;android-33 build-tools;34.0.0 platform-tools ndk;27.0.12277971"
+
+      - name: Set ANDROID_NDK_HOME
+        shell: bash
+        run: |
+          echo "ANDROID_NDK_HOME=$(dirname "$(find "$ANDROID_HOME/ndk" -name "android.toolchain.cmake" -type f 2>/dev/null | head -1)"/..)" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME}" >> "$GITHUB_ENV"
 
       - name: Install Qt for Android
         uses: jdpurcell/install-qt-action@v5
@@ -50,6 +56,7 @@ jobs:
           AQT_CONFIG: ${{ github.workspace }}/source/tools/aqt-settings.ini
         with:
           version: 6.11.1
+          target: android
           arch: android_x86_64
           modules: qtimageformats qtmultimedia qtpositioning qtserialport
           tools: ''
