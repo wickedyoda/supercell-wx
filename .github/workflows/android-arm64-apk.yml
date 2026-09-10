@@ -78,6 +78,7 @@ jobs:
             --build missing \
             --profile:build scwx-linux_gcc-13 \
             --profile:host scwx-android_arm64-v8a \
+            -c tools.android:ndk_path="$ANDROID_NDK_HOME" \
             --settings:all build_type=Release \
             --output-folder ./build/conan/
 
