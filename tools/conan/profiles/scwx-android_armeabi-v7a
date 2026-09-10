@@ -7,6 +7,3 @@ compiler.version=17
 compiler.libcxx=c++_shared
 build_type=Release
 compiler.cppstd=20
-
-[tool_requires]
-cmake/[>=4.2.0]

@@ -1,0 +1,125 @@
+name: Android ARM64 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'android-port-build'
+
+jobs:
+  android-arm64-apk:
+    name: android_arm64_apk
+    runs-on: ubuntu-24.04
+    env:
+      SCWX_VERSION: v0.6.1
+      ANDROID_API_LEVEL: "33"
+      ANDROID_ABI: arm64-v8a
+
+    steps:
+      - name: Setup
+        run: git config --global core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          path: source
+          submodules: recursive
+
+      - name: Install Git LFS
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq git-lfs
+          git lfs install
+
+      - name: Install Java
+        uses: actions/setup-java@v4.2.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4.0.0
+        with:
+          cmdline-tools-version: 14742923
+          accept-android-sdk-licenses: true
+          packages: "platforms;android-33 build-tools;34.0.0 platform-tools ndk;29.0.14206865"
+
+      - name: Set ANDROID_NDK_HOME
+        shell: bash
+        run: |
+          echo "ANDROID_NDK_HOME=$(dirname "$(find "$ANDROID_HOME/ndk" -name "android.toolchain.cmake" -type f 2>/dev/null | head -1)"/..)" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME}" >> "$GITHUB_ENV"
+
+      - name: Install Qt for Android
+        uses: jdpurcell/install-qt-action@v5
+        env:
+          AQT_CONFIG: ${{ github.workspace }}/source/tools/aqt-settings.ini
+        with:
+          version: 6.11.1
+          target: android
+          arch: android_arm64_v8a
+          modules: qtimageformats qtmultimedia qtpositioning qtserialport
+          tools: ''
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e
+
+      - name: Setup Python Environment
+        shell: bash
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install conan
+
+      - name: Install Conan Packages
+        shell: bash
+        run: |
+          cd source
+          conan config install ./tools/conan/profiles -tf profiles
+          conan install . \
+            --remote conancenter \
+            --build missing \
+            --profile:build scwx-linux_gcc-13 \
+            --profile:host scwx-android_arm64-v8a \
+            -c tools.android:ndk_path="$ANDROID_NDK_HOME" \
+            --settings:all build_type=Release \
+            --output-folder ./build/conan/
+
+      - name: Configure Android Build
+        shell: bash
+        run: |
+          cd source
+          cmake --preset android-arm64-v8a-release
+
+      - name: Build Android Client
+        shell: bash
+        run: |
+          cmake --build source/build/android-arm64-v8a-release --target supercell-wx
+
+      - name: Package Android APK
+        shell: bash
+        run: |
+          ANDROIDDEPLOYQT=$(find "${RUNNER_WORKSPACE}/Qt" -type f -name androiddeployqt | head -n1)
+          if [[ -z "$ANDROIDDEPLOYQT" ]]; then
+            echo "androiddeployqt not found"
+            exit 1
+          fi
+          "$ANDROIDDEPLOYQT" \
+            --input source/build/android-arm64-v8a-release/AndroidDeploymentSettings.json \
+            --output source/build/android-arm64-v8a-release/android-build \
+            --android-platform android-33 \
+            --release \
+            --apk
+
+      - name: Locate APK
+        id: locate_apk
+        shell: bash
+        run: |
+          APK_PATH=$(find source/build/android-arm64-v8a-release/android-build -name "*.apk" | head -n1 || true)
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: supercell-wx-android-arm64-apk
+          path: |
+            source/build/android-arm64-v8a-release/android-build/**/*.apk
+            source/build/android-arm64-v8a-release/android-build/**/*.aab
+            source/build/android-arm64-v8a-release/android-build/**/*.so

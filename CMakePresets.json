@@ -545,7 +545,8 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "Android",
-        "CMAKE_SYSTEM_VERSION": "33"
+        "CMAKE_SYSTEM_VERSION": "33",
+        "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_HOME}"
       }
     },
     {
