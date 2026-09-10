@@ -690,7 +690,8 @@ jobs:
         conan install . \
           --remote conancenter \
           --build missing \
-          --profile:all scwx-android_x86_64 \
+          --profile:build scwx-linux_gcc-13 \
+          --profile:host scwx-android_x86_64 \
           --settings:all build_type=Release \
           --output-folder ./build/conan/
 
