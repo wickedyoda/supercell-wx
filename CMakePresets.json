@@ -481,7 +481,9 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_SYSTEM_NAME": "Android",
-        "CMAKE_SYSTEM_VERSION": "33"
+        "CMAKE_SYSTEM_VERSION": "33",
+        "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_HOME}",
+        "CMAKE_ANDROID_STL_TYPE": "c++_shared"
       }
     },
     {
@@ -490,7 +492,8 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_ANDROID_ABI": "arm64-v8a",
-        "CMAKE_ANDROID_PLATFORM": "android-33"
+        "CMAKE_ANDROID_PLATFORM": "android-33",
+        "CMAKE_PREFIX_PATH": "$env{HOME}/Qt/6.11.0/android/android_arm64_v8a"
       }
     },
     {
@@ -508,7 +511,8 @@
       "hidden": true,
       "cacheVariables": {
         "CMAKE_ANDROID_ABI": "x86_64",
-        "CMAKE_ANDROID_PLATFORM": "android-33"
+        "CMAKE_ANDROID_PLATFORM": "android-33",
+        "CMAKE_PREFIX_PATH": "$env{HOME}/Qt/6.11.0/android/android_x86_64"
       }
     },
     {
@@ -518,7 +522,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CONAN_HOST_PROFILE": "scwx-android_arm64-v8a",
-        "CONAN_BUILD_PROFILE": "scwx-android_arm64-v8a"
+        "CONAN_BUILD_PROFILE": "scwx-linux_gcc-13"
       }
     },
     {
@@ -528,7 +532,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CONAN_HOST_PROFILE": "scwx-android_arm64-v8a-debug",
-        "CONAN_BUILD_PROFILE": "scwx-android_arm64-v8a-debug"
+        "CONAN_BUILD_PROFILE": "scwx-linux_gcc-13"
       }
     },
     {
@@ -538,7 +542,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CONAN_HOST_PROFILE": "scwx-android_armeabi-v7a",
-        "CONAN_BUILD_PROFILE": "scwx-android_armeabi-v7a"
+        "CONAN_BUILD_PROFILE": "scwx-linux_gcc-13"
       }
     },
     {
@@ -548,7 +552,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CONAN_HOST_PROFILE": "scwx-android_armeabi-v7a-debug",
-        "CONAN_BUILD_PROFILE": "scwx-android_armeabi-v7a-debug"
+        "CONAN_BUILD_PROFILE": "scwx-linux_gcc-13"
       }
     },
     {
@@ -558,7 +562,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CONAN_HOST_PROFILE": "scwx-android_x86_64",
-        "CONAN_BUILD_PROFILE": "scwx-android_x86_64"
+        "CONAN_BUILD_PROFILE": "scwx-linux_gcc-13"
       }
     },
     {
@@ -568,7 +572,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CONAN_HOST_PROFILE": "scwx-android_x86_64-debug",
-        "CONAN_BUILD_PROFILE": "scwx-android_x86_64-debug"
+        "CONAN_BUILD_PROFILE": "scwx-linux_gcc-13"
       }
     },
     {

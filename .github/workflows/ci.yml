@@ -479,12 +479,18 @@ jobs:
         java-version: '11'
 
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4.0.0
 
     - name: Install Android SDK Components
       shell: bash
       run: |
-        yes | sdkmanager "platforms;android-33" "build-tools;34.0.0" "platform-tools"
+        yes | sdkmanager "platforms;android-33" "build-tools;34.0.0" "platform-tools" "ndk;29.0.14206865"
+
+    - name: Set ANDROID_NDK_HOME
+      shell: bash
+      run: |
+        echo "ANDROID_NDK_HOME=$(dirname "$(find "$ANDROID_HOME/ndk" -name "android.toolchain.cmake" -type f 2>/dev/null | head -1)"/..)" >> "$GITHUB_ENV"
+        echo "ANDROID_NDK_HOME=${ANDROID_NDK_HOME}" >> "$GITHUB_ENV"
 
     - name: Install Qt for Android
       uses: jdpurcell/install-qt-action@v5
@@ -492,6 +498,7 @@ jobs:
         AQT_CONFIG: ${{ github.workspace }}/source/tools/aqt-settings.ini
       with:
         version: 6.11.0
+        target: android
         arch: android_x86_64
         modules: qtimageformats qtmultimedia qtpositioning qtserialport
         tools: ''
@@ -517,7 +524,9 @@ jobs:
         conan install . \
           --remote conancenter \
           --build missing \
-          --profile:all scwx-android_x86_64 \
+          --profile:build scwx-linux_gcc-13 \
+          --profile:host scwx-android_x86_64 \
+          -c tools.android:ndk_path="$ANDROID_NDK_HOME" \
           --settings:all build_type=Release \
           --output-folder ./build/conan/
 
