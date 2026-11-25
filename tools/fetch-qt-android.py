@@ -6,7 +6,9 @@ change), and the archive names in the 6.7.x tree carry a build-id prefix, so
 this script lists each package directory and pulls the .7z archives itself.
 """
 import os
+import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -51,4 +53,25 @@ for name in sorted(wanted):
         subprocess.run(["7z", "x", "-y", f"-o{DEST}", local],
                        check=True, stdout=subprocess.DEVNULL)
         downloaded += 1
-print(f"DONE archives={downloaded}")
+# The archives contain "<version>/<abi>/..."; flatten so that DEST is the Qt
+# installation root (bin/, lib/, include/ ...) as CMake and androiddeployqt
+# expect.
+for candidate in sorted(pathlib.Path(DEST).iterdir()):
+    if candidate.is_dir() and re.fullmatch(r"\d+\.\d+\.\d+", candidate.name):
+        inner = candidate / f"android_{ABI}"
+        if not inner.is_dir():
+            inner = candidate / ABI
+        if inner.is_dir():
+            for item in inner.iterdir():
+                target = pathlib.Path(DEST) / item.name
+                if not target.exists():
+                    item.rename(target)
+            shutil.rmtree(candidate, ignore_errors=True)
+        break
+
+config = pathlib.Path(DEST) / "lib" / "cmake" / "Qt6" / "Qt6Config.cmake"
+if not config.is_file():
+    print(f"ERROR: {config} is missing; Qt extraction did not produce a usable install", file=sys.stderr)
+    sys.exit(3)
+
+print(f"DONE archives={downloaded} root={DEST}")
