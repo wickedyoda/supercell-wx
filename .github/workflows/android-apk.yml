@@ -1,0 +1,268 @@
+name: Android APK
+
+# Builds the arm64-v8a Android package for Supercell Wx and publishes it to a
+# GitHub release. The recipe mirrors the verified local cross-build: Qt 6.7.3
+# for Android (the last Qt release that publishes qtmultimedia / qtpositioning
+# / qtserialport for Android), NDK 27.2, Conan dependencies built for armv8,
+# then androiddeployqt.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to publish (e.g. v0.5.6-android.1). Empty = artifact only.'
+        required: false
+        type: string
+      release_name:
+        description: 'Release title (defaults to the tag)'
+        required: false
+        type: string
+  push:
+    branches:
+      - android-apk-arm64
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QT_VERSION: 6.7.3
+  ANDROID_ABI: arm64-v8a
+  ANDROID_PLATFORM: android-34
+  NDK_VERSION: 27.2.12479018
+
+jobs:
+  android-arm64:
+    name: android_arm64_v8a
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: '17'
+
+    - name: Setup Ubuntu Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          ninja-build p7zip-full libglib2.0-0t64 libdbus-1-3 libfontconfig1 \
+          libxkbcommon0 libfreetype6 patch
+
+    - name: Setup Android SDK
+      run: |
+        yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+        "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+          "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;${NDK_VERSION}"
+        echo "ANDROID_NDK=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+        echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+    # Boost's b2 assembles its ARM64 sources through a bare `clang++`, so the
+    # NDK target wrappers have to be first on PATH for Conan's build.
+    - name: Setup NDK compiler wrappers
+      run: |
+        NDKBIN="${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+        mkdir -p "${RUNNER_TEMP}/ndk-toolwrap"
+        for t in clang clang++ cc c++ gcc g++; do
+          case "$t" in
+            clang|cc|gcc) real="aarch64-linux-android33-clang" ;;
+            *)            real="aarch64-linux-android33-clang++" ;;
+          esac
+          printf '#!/bin/sh\nexec %s/%s "$@"\n' "$NDKBIN" "$real" > "${RUNNER_TEMP}/ndk-toolwrap/$t"
+          chmod +x "${RUNNER_TEMP}/ndk-toolwrap/$t"
+        done
+        echo "${RUNNER_TEMP}/ndk-toolwrap" >> "$GITHUB_PATH"
+
+    - name: Setup Python Environment
+      run: |
+        python3 -m venv .venv
+        .venv/bin/pip install --upgrade pip
+        .venv/bin/pip install -r requirements.txt aqtinstall
+
+    - name: Install Qt for Desktop (host tools)
+      run: |
+        .venv/bin/aqt install-qt linux desktop "${QT_VERSION}" linux_gcc_64 \
+          -O "${RUNNER_TEMP}/Qt"
+
+    # aqtinstall cannot resolve Android architectures for current Qt, so the
+    # packages are pulled straight from the Qt repository metadata.
+    - name: Install Qt for Android
+      env:
+        QT_VERSION_DIR: qt6_7_3/qt6_673
+        QT_ABI: arm64_v8a
+      run: |
+        QT_DEST="${RUNNER_TEMP}/Qt/${QT_VERSION}/android_${ANDROID_ABI}" \
+        QT_VERSION_DIR="${QT_VERSION_DIR}" \
+        QT_ABI="${QT_ABI}" \
+          python3 tools/fetch-qt-android.py
+
+    - name: Cache Conan Packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.conan2
+        key: android-conan-v3-${{ hashFiles('conanfile.py', 'tools/conan/profiles/scwx-android_*') }}
+        restore-keys: |
+          android-conan-v3-
+
+    - name: Install Conan Packages
+      env:
+        CONAN_CPU_COUNT: 4
+      run: |
+        .venv/bin/conan config install ./tools/conan/profiles -tf profiles
+        .venv/bin/conan install . \
+          --remote conancenter \
+          --build missing \
+          --profile:build scwx-linux_gcc-13 \
+          --profile:host scwx-android_${ANDROID_ABI} \
+          -c tools.android:ndk_path="${ANDROID_NDK}" \
+          --settings:all build_type=Release \
+          --output-folder ./build/conan/
+
+    - name: Configure Android Build
+      run: |
+        cmake --preset android-${ANDROID_ABI}-release \
+          -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES="" \
+          -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK}/build/cmake/android.toolchain.cmake" \
+          -DANDROID_ABI=${ANDROID_ABI} \
+          -DANDROID_PLATFORM=${ANDROID_PLATFORM} \
+          -DANDROID_SDK_ROOT="${ANDROID_HOME}" \
+          -DANDROID_HOME="${ANDROID_HOME}" \
+          -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON \
+          -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
+          -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/Qt/${QT_VERSION}/android_${ANDROID_ABI};${GITHUB_WORKSPACE}/build/conan" \
+          -DQT_HOST_PATH="${RUNNER_TEMP}/Qt/${QT_VERSION}/gcc_64" \
+          -DNDK_DIR="${ANDROID_NDK}" \
+          -DTARGET_ARCH=ANDROID \
+          -DANDROID_BUILD_CURL=OFF \
+          -DANDROID_BUILD_OPENSSL=OFF \
+          -DANDROID_BUILD_ZLIB=OFF \
+          -DUSE_OPENSSL=ON
+
+    - name: Build Android Client
+      run: cmake --build build/android-${ANDROID_ABI}-release --target supercell-wx -j"$(nproc)"
+
+    - name: Build shared OpenSSL for Qt's TLS backend
+      env:
+        CONAN_CPU_COUNT: 4
+      run: |
+        # The application links OpenSSL statically (Gradle cannot package a
+        # libssl.so.3), but Qt's Android TLS backend dlopens the shared
+        # library at runtime, so a shared copy is built purely for packaging.
+        .venv/bin/conan install . \
+          --remote conancenter \
+          --build missing \
+          --profile:build scwx-linux_gcc-13 \
+          --profile:host scwx-android_${ANDROID_ABI} \
+          -c tools.android:ndk_path="${ANDROID_NDK}" \
+          -o "openssl/*:shared=True" \
+          --settings:all build_type=Release \
+          --output-folder ./build/conan-openssl-shared/
+
+    - name: Stage and strip application library
+      run: |
+        BUILD_DIR="build/android-${ANDROID_ABI}-release"
+        LIBS_DIR="${BUILD_DIR}/android-build/libs/${ANDROID_ABI}"
+        mkdir -p "${LIBS_DIR}"
+        cp "${BUILD_DIR}/Release/lib/libsupercell-wx_${ANDROID_ABI}.so" "${LIBS_DIR}/"
+        STRIP="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+        "${STRIP}" --strip-unneeded "${LIBS_DIR}/libsupercell-wx_${ANDROID_ABI}.so"
+        # Qt's Android TLS backend globs for libssl.* / libcrypto.*; Gradle only
+        # packages files ending in .so, hence the underscore naming.
+        for n in libssl.so.3 libcrypto.so.3; do
+          src=$(find ~/.conan2 -name "$n" -type f 2>/dev/null | grep -v '/b/build' | head -1 || true)
+          if [ -n "$src" ]; then
+            case "$n" in
+              libssl.so.3)    cp -L "$src" "${LIBS_DIR}/libssl_3.so" ;;
+              libcrypto.so.3) cp -L "$src" "${LIBS_DIR}/libcrypto_3.so" ;;
+            esac
+          fi
+        done
+        for n in libiconv.so libcharset.so; do
+          src=$(find ~/.conan2 -name "$n" -type f 2>/dev/null | grep -v '/b/build' | head -1 || true)
+          [ -n "$src" ] && cp -L "$src" "${LIBS_DIR}/"
+        done
+        ls -la "${LIBS_DIR}"
+
+    - name: Restore signing keystore
+      env:
+        KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      run: |
+        if [ -n "${KEYSTORE_BASE64}" ]; then
+          echo "${KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/release.keystore"
+          echo "SIGN_ARGS=--sign ${RUNNER_TEMP}/release.keystore ${{ secrets.ANDROID_KEY_ALIAS }} --storepass ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+        else
+          echo "No keystore secret configured: the APK will be unsigned"
+          echo "SIGN_ARGS=" >> "$GITHUB_ENV"
+        fi
+
+    - name: Package Android APK
+      run: |
+        BUILD_DIR="build/android-${ANDROID_ABI}-release"
+        SETTINGS=$(find "${BUILD_DIR}" -name 'android-*-deployment-settings.json' | head -1)
+        echo "Deployment settings: ${SETTINGS}"
+        "${RUNNER_TEMP}/Qt/${QT_VERSION}/gcc_64/bin/androiddeployqt" \
+          --input "${SETTINGS}" \
+          --output "${BUILD_DIR}/android-build" \
+          --android-platform "${ANDROID_PLATFORM}" \
+          --release ${SIGN_ARGS} \
+          --apk "${BUILD_DIR}/supercell-wx-${ANDROID_ABI}.apk"
+
+    - name: Verify APK
+      run: |
+        BUILD_DIR="build/android-${ANDROID_ABI}-release"
+        APK="${BUILD_DIR}/supercell-wx-${ANDROID_ABI}.apk"
+        BT="${ANDROID_HOME}/build-tools/34.0.0"
+        unzip -l "$APK" | grep -E 'AndroidManifest.xml|classes.dex|lib/'"${ANDROID_ABI}"'/libsupercell-wx'
+        "${BT}/aapt" dump badging "$APK" | grep -E '^package|sdkVersion|targetSdk'
+        "${BT}/apksigner" verify --print-certs "$APK"
+        # dependency closure: every DT_NEEDED must be bundled or a system lib
+        rm -rf /tmp/apkcheck && mkdir -p /tmp/apkcheck
+        unzip -q "$APK" 'lib/*' -d /tmp/apkcheck
+        cd /tmp/apkcheck/lib/${ANDROID_ABI}
+        READELF="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+        for l in *.so; do "$READELF" -d "$l" 2>/dev/null | awk '/NEEDED/{gsub(/[\[\]]/,"",$5); print $5}'; done \
+          | sort -u | while read -r n; do
+              [ -e "$n" ] && continue
+              case "$n" in
+                libc.so|libm.so|libdl.so|liblog.so|libz.so|libandroid.so|libEGL.so|libGLESv2.so|libGLESv3.so|libOpenSLES.so|libjnigraphics.so|libnativewindow.so|libmediandk.so) ;;
+                *) echo "UNRESOLVED DEPENDENCY: $n"; exit 1 ;;
+              esac
+            done
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: supercell-wx-android-${ANDROID_ABI}
+        path: build/android-arm64-v8a-release/supercell-wx-*.apk
+        if-no-files-found: error
+
+    - name: Publish Release
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag != '' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ inputs.release_tag }}
+        NAME: ${{ inputs.release_name }}
+      run: |
+        APK="build/android-arm64-v8a-release/supercell-wx-${ANDROID_ABI}.apk"
+        OUT="supercell-wx-${TAG}-${ANDROID_ABI}.apk"
+        cp "$APK" "$OUT"
+        sha256sum "$OUT" > "$OUT.sha256"
+        TITLE="${NAME:-Supercell Wx ${TAG} (Android ${ANDROID_ABI})}"
+        if gh release view "$TAG" >/dev/null 2>&1; then
+          gh release upload "$TAG" "$OUT" "$OUT.sha256" --clobber
+        else
+          gh release create "$TAG" "$OUT" "$OUT.sha256" \
+            --title "$TITLE" \
+            --notes "Android ${ANDROID_ABI} build from ${GITHUB_SHA} (Qt ${QT_VERSION}, NDK ${NDK_VERSION}, minSdk 33, targetSdk 34)." \
+            --latest=false
+        fi
