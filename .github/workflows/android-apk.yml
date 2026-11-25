@@ -73,10 +73,10 @@ jobs:
       run: |
         NDKBIN="${ANDROID_HOME}/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin"
         mkdir -p "${RUNNER_TEMP}/ndk-toolwrap"
-        for t in clang clang++ cc c++ gcc g++; do
+        for t in clang clang++ clang-17 clang++-17 cc c++ gcc g++ gcc-13 g++-13; do
           case "$t" in
-            clang|cc|gcc) real="aarch64-linux-android33-clang" ;;
-            *)            real="aarch64-linux-android33-clang++" ;;
+            clang|clang-17|cc|gcc|gcc-13) real="aarch64-linux-android33-clang" ;;
+            *)                            real="aarch64-linux-android33-clang++" ;;
           esac
           printf '#!/bin/sh\nexec %s/%s "$@"\n' "$NDKBIN" "$real" > "${RUNNER_TEMP}/ndk-toolwrap/$t"
           chmod +x "${RUNNER_TEMP}/ndk-toolwrap/$t"
@@ -125,6 +125,7 @@ jobs:
           --profile:build scwx-linux_gcc-13 \
           --profile:host scwx-android_${ANDROID_ABI} \
           -c tools.android:ndk_path="${ANDROID_NDK}" \
+          -c "tools.build:compiler_executables={\"c\":\"${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang\",\"cpp\":\"${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang++\"}" \
           --settings:all build_type=Release \
           --output-folder ./build/conan/
 
@@ -164,6 +165,7 @@ jobs:
           --profile:build scwx-linux_gcc-13 \
           --profile:host scwx-android_${ANDROID_ABI} \
           -c tools.android:ndk_path="${ANDROID_NDK}" \
+          -c "tools.build:compiler_executables={\"c\":\"${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang\",\"cpp\":\"${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang++\"}" \
           -o "openssl/*:shared=True" \
           --settings:all build_type=Release \
           --output-folder ./build/conan-openssl-shared/
