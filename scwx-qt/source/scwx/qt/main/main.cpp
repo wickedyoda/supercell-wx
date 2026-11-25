@@ -42,6 +42,104 @@
 #include <qt6ct-common/qt6ct.h>
 #undef QT6CT_LIBRARY
 
+#if defined(__ANDROID__)
+#   include <android/log.h>
+
+#   include <QDir>
+#   include <QFile>
+#   include <QMessageBox>
+#   include <QTextStream>
+#   include <cstdlib>
+#   include <exception>
+
+namespace
+{
+
+// On Android a failure before (or inside) the Qt event loop closes the app
+// with no visible reason. Mirror every Qt message into a file inside the
+// app's external files directory and into logcat, so a crash is diagnosable
+// without a debugger attached.
+QString ScwxLogFilePath()
+{
+   const char* externalStorage = std::getenv("EXTERNAL_STORAGE");
+   const QString base = externalStorage != nullptr && *externalStorage != '\0' ?
+                           QString::fromLocal8Bit(externalStorage) :
+                           QStringLiteral("/storage/emulated/0");
+
+   const QString dir = base + QStringLiteral("/Android/data/net.supercellwx.app/files");
+   QDir().mkpath(dir);
+
+   return dir + QStringLiteral("/scwx-startup.log");
+}
+
+void ScwxAndroidMessageHandler(QtMsgType                type,
+                               const QMessageLogContext&,
+                               const QString&            message)
+{
+   const char* level = "I";
+   int         priority = ANDROID_LOG_INFO;
+
+   switch (type)
+   {
+   case QtDebugMsg:
+      level    = "D";
+      priority = ANDROID_LOG_DEBUG;
+      break;
+   case QtInfoMsg:
+      level    = "I";
+      priority = ANDROID_LOG_INFO;
+      break;
+   case QtWarningMsg:
+      level    = "W";
+      priority = ANDROID_LOG_WARN;
+      break;
+   case QtCriticalMsg:
+      level    = "E";
+      priority = ANDROID_LOG_ERROR;
+      break;
+   case QtFatalMsg:
+      level    = "F";
+      priority = ANDROID_LOG_FATAL;
+      break;
+   }
+
+   const QByteArray utf8 = message.toUtf8();
+
+   __android_log_write(priority, "scwx", utf8.constData());
+
+   QFile file {ScwxLogFilePath()};
+   if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+   {
+      QTextStream stream {&file};
+      stream << level << " " << message << "\n";
+      stream.flush();
+   }
+
+   if (type == QtFatalMsg)
+   {
+      std::abort();
+   }
+}
+
+void ScwxAndroidReportFatal(const QString& detail)
+{
+   __android_log_write(ANDROID_LOG_FATAL, "scwx", detail.toUtf8().constData());
+
+   QFile file {ScwxLogFilePath()};
+   if (file.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text))
+   {
+      QTextStream stream {&file};
+      stream << "FATAL " << detail << "\n";
+      stream.flush();
+   }
+
+   // Best effort: show the reason on screen instead of closing silently
+   QMessageBox::critical(nullptr, QStringLiteral("Supercell Wx"), detail);
+}
+
+} // namespace
+#endif
+
 static const std::string logPrefix_ = "scwx::main";
 static const auto        logger_    = scwx::util::Logger::Create(logPrefix_);
 
@@ -49,7 +147,7 @@ static void ConfigureTheme(const std::vector<std::string>& args);
 static void InitializeOpenGL();
 static void OverrideDefaultStyle(const std::vector<std::string>& args);
 
-int main(int argc, char* argv[])
+static int scwxMain(int argc, char* argv[])
 {
    // Store arguments
    std::vector<std::string> args {};
@@ -271,8 +369,19 @@ static void InitializeOpenGL()
    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts, true);
 
    QSurfaceFormat surfaceFormat = QSurfaceFormat::defaultFormat();
+
+#if defined(__ANDROID__)
+   // Android has no desktop OpenGL: a CoreProfile/OpenGL request makes the
+   // platform fail to create a context and the application closes at startup
+   surfaceFormat.setRenderableType(QSurfaceFormat::RenderableType::OpenGLES);
+   surfaceFormat.setProfile(QSurfaceFormat::OpenGLContextProfile::NoProfile);
+   surfaceFormat.setVersion(3, 0);
+   surfaceFormat.setDepthBufferSize(24);
+   surfaceFormat.setStencilBufferSize(8);
+#else
    surfaceFormat.setProfile(QSurfaceFormat::OpenGLContextProfile::CoreProfile);
    surfaceFormat.setRenderableType(QSurfaceFormat::RenderableType::OpenGL);
+#endif
 
 #if defined(__APPLE__)
    // For macOS, we must choose between OpenGL 4.1 Core and OpenGL 2.1
@@ -305,5 +414,54 @@ OverrideDefaultStyle([[maybe_unused]] const std::vector<std::string>& args)
    {
       QApplication::setStyle("windowsvista");
    }
+#endif
+}
+
+int main(int argc, char* argv[])
+{
+#if defined(__ANDROID__)
+   qInstallMessageHandler(&ScwxAndroidMessageHandler);
+
+   std::set_terminate(
+      []
+      {
+         QString detail = QStringLiteral(
+            "Supercell Wx terminated unexpectedly (std::terminate).");
+         try
+         {
+            if (auto current = std::current_exception())
+            {
+               std::rethrow_exception(current);
+            }
+         }
+         catch (const std::exception& ex)
+         {
+            detail += QStringLiteral("\n\n") + QString::fromLocal8Bit(ex.what());
+         }
+         catch (...)
+         {
+         }
+
+         ScwxAndroidReportFatal(detail);
+         std::abort();
+      });
+
+   try
+   {
+      return scwxMain(argc, argv);
+   }
+   catch (const std::exception& ex)
+   {
+      ScwxAndroidReportFatal(
+         QStringLiteral("Startup failed: ") + QString::fromLocal8Bit(ex.what()));
+   }
+   catch (...)
+   {
+      ScwxAndroidReportFatal(QStringLiteral("Startup failed: unknown error"));
+   }
+
+   return 1;
+#else
+   return scwxMain(argc, argv);
 #endif
 }
