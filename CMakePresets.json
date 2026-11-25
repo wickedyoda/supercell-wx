@@ -491,7 +491,7 @@
       "inherits": "android-base",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_ANDROID_ABI": "arm64-v8a",
+        "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a",
         "CMAKE_ANDROID_PLATFORM": "android-33",
         "CMAKE_PREFIX_PATH": "$env{HOME}/Qt/6.11.0/android/android_arm64_v8a"
       }
@@ -501,7 +501,7 @@
       "inherits": "android-base",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_ANDROID_ABI": "armeabi-v7a",
+        "CMAKE_ANDROID_ARCH_ABI": "armeabi-v7a",
         "CMAKE_ANDROID_PLATFORM": "android-33"
       }
     },
@@ -510,7 +510,7 @@
       "inherits": "android-base",
       "hidden": true,
       "cacheVariables": {
-        "CMAKE_ANDROID_ABI": "x86_64",
+        "CMAKE_ANDROID_ARCH_ABI": "x86_64",
         "CMAKE_ANDROID_PLATFORM": "android-33",
         "CMAKE_PREFIX_PATH": "$env{HOME}/Qt/6.11.0/android/android_x86_64"
       }

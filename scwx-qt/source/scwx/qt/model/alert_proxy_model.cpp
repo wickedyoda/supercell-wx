@@ -45,9 +45,15 @@ AlertProxyModel::~AlertProxyModel() = default;
 
 void AlertProxyModel::SetAlertActiveFilter(bool enabled)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
    beginFilterChange();
    p->alertActiveFilterEnabled_ = enabled;
    endFilterChange(Direction::Rows);
+#else
+   // beginFilterChange/endFilterChange arrived in Qt 6.9
+   p->alertActiveFilterEnabled_ = enabled;
+   invalidateRowsFilter();
+#endif
 }
 
 bool AlertProxyModel::filterAcceptsRow(int                sourceRow,

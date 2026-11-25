@@ -135,9 +135,9 @@ void RadarProductLayer::Initialize(
    glGenTextures(1, &p->texture_);
    p->colorTableNeedsUpdate_ = true;
    UpdateColorTable(mapContext);
-   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-   glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 
    auto radarProductView = mapContext->radar_product_view();
    connect(radarProductView.get(),
@@ -289,7 +289,7 @@ void RadarProductLayer::Render(
    if (wireframeEnabled)
    {
       // Set polygon mode to draw wireframe
-      glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      SCWX_GL_POLYGON_MODE(GL_LINE);
    }
 
    if (p->colorTableNeedsUpdate_)
@@ -356,7 +356,7 @@ void RadarProductLayer::Render(
       glUniform1f(p->uDataMomentScaleLocation_, p->scale_);
 
       glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_1D, p->texture_);
+      glBindTexture(GL_TEXTURE_2D, p->texture_);
       glBindVertexArray(p->vao_);
 
       glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(p->numVertices_));
@@ -365,7 +365,7 @@ void RadarProductLayer::Render(
    if (wireframeEnabled)
    {
       // Restore polygon mode to default
-      glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      SCWX_GL_POLYGON_MODE(GL_FILL);
    }
 
    if (radarProductView != nullptr &&
@@ -608,16 +608,17 @@ void RadarProductLayer::UpdateColorTable(
    const auto scale = static_cast<float>(rangeMax - rangeMin);
 
    glActiveTexture(GL_TEXTURE0);
-   glBindTexture(GL_TEXTURE_1D, p->texture_);
-   glTexImage1D(GL_TEXTURE_1D,
+   glBindTexture(GL_TEXTURE_2D, p->texture_);
+   glTexImage2D(GL_TEXTURE_2D,
                 0,
                 GL_RGBA,
                 (GLsizei) colorTable.size(),
+                1,
                 0,
                 GL_RGBA,
                 GL_UNSIGNED_BYTE,
                 colorTable.data());
-   glGenerateMipmap(GL_TEXTURE_1D);
+   glGenerateMipmap(GL_TEXTURE_2D);
 
    p->rangeMin_ = rangeMin;
    p->scale_    = scale;

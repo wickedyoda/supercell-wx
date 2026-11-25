@@ -37,6 +37,12 @@ target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 target_compile_definitions(imgui PUBLIC IMGUI_USER_CONFIG=<scwx/external/imgui/imconfig.h>)
 
+if (ANDROID)
+    # Android renders through OpenGL ES, so the ImGui OpenGL3 backend must be
+    # compiled in ES3 mode
+    target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_ES3)
+endif()
+
 target_link_libraries(imgui PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
                                     Freetype::Freetype)
 

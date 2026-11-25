@@ -25,3 +25,8 @@ include(stb.cmake)
 include(textflowcpp.cmake)
 include(units.cmake)
 include(qt6ct.cmake)
+
+if (ANDROID)
+    # No GLU on Android: polygon tessellation comes from a libtess2-backed shim
+    add_subdirectory(glu-tess)
+endif()

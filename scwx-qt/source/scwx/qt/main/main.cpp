@@ -229,7 +229,13 @@ static void ConfigureTheme(const std::vector<std::string>& args)
          QString::fromStdString(scwx::qt::types::GetQtStyleName(uiStyle)));
    }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
    QGuiApplication::styleHints()->setColorScheme(qtColorScheme);
+#else
+   // QStyleHints::setColorScheme arrived in Qt 6.8; the palette below still
+   // applies the requested theme on older Qt
+   Q_UNUSED(qtColorScheme)
+#endif
 
    std::optional<std::string> paletteFile;
    if (uiStyle == scwx::qt::types::UiStyle::FusionCustom)

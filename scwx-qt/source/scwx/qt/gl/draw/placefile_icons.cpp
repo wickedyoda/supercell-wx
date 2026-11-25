@@ -251,7 +251,7 @@ void PlacefileIcons::Initialize()
    glEnableVertexAttribArray(6);
 
    // aDisplayed
-   glVertexAttribI1i(7, 1);
+   glVertexAttribI4i(7, 1, 0, 0, 0);
 
    // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
    // NOLINTEND(performance-no-int-to-ptr)

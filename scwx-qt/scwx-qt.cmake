@@ -19,7 +19,17 @@ find_package(geographiclib)
 find_package(geos)
 find_package(glm)
 find_package(JPEG)
-find_package(OpenGL REQUIRED)
+
+if (ANDROID)
+    # Android only provides OpenGL ES through the NDK: there is no desktop
+    # OpenGL, no GLU, and FindOpenGL cannot cross-compile against the sysroot
+    find_library(SCWX_GLES_LIBRARY GLESv3 REQUIRED)
+    add_library(OpenGL::GL UNKNOWN IMPORTED)
+    set_target_properties(OpenGL::GL PROPERTIES
+                          IMPORTED_LOCATION "${SCWX_GLES_LIBRARY}")
+else()
+    find_package(OpenGL REQUIRED)
+endif()
 find_package(Python COMPONENTS Interpreter)
 find_package(SQLite3)
 find_package(TIFF)
@@ -704,9 +714,11 @@ elseif (ANDROID)
     set_target_properties(supercell-wx PROPERTIES
         QT_QML_MODULE_VERSION 1.0
         QT_QML_MODULE_URI net.supercellwx.app
-        ANDROID_PACKAGE_SOURCE_DIR "${scwx-qt_SOURCE_DIR}/android"
-        ANDROID_MIN_SDK_VERSION 33
-        ANDROID_TARGET_SDK_VERSION 34
+        # Qt reads the QT_ANDROID_* property names; the unprefixed names are
+        # silently ignored, which drops the custom manifest and resources
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${scwx-qt_SOURCE_DIR}/android"
+        QT_ANDROID_MIN_SDK_VERSION 33
+        QT_ANDROID_TARGET_SDK_VERSION 34
     )
 
     # Copy Android manifest and resources if they exist
@@ -746,11 +758,11 @@ target_include_directories(supercell-wx PUBLIC ${scwx-qt_SOURCE_DIR}/source)
 
 target_compile_options(scwx-qt PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic> $<$<NOT:$<PLATFORM_ID:Android>>:-Werror>
 )
 target_compile_options(supercell-wx PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
-    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic> $<$<NOT:$<PLATFORM_ID:Android>>:-Werror>
 )
 
 if (MSVC)
@@ -817,7 +829,9 @@ target_link_libraries(scwx-qt PUBLIC Qt${QT_VERSION_MAJOR}::Widgets
                                      Boost::timer
                                      Boost::atomic
                                      QMapLibre::Core
-                                     OpenGL::GLU
+                                     $<$<NOT:$<PLATFORM_ID:Android>>:OpenGL::GLU>
+                                     $<$<PLATFORM_ID:Android>:glu_tess>
+                                     $<$<PLATFORM_ID:Android>:OpenGL::GL>
                                      $<$<CXX_COMPILER_ID:MSVC>:opengl32>
                                      $<$<CXX_COMPILER_ID:MSVC>:SetupAPI>
                                      Fontconfig::Fontconfig
@@ -854,6 +868,9 @@ if (LINUX)
     set_target_properties(supercell-wx PROPERTIES INSTALL_RPATH "\$ORIGIN/../lib")
 endif()
 
+if (NOT ANDROID)
+# Android packaging is produced by androiddeployqt; RUNTIME_DEPENDENCIES is
+# unsupported when cross-compiling
 install(TARGETS supercell-wx
                 MLNQtCore # QMapLibre::Core
         RUNTIME_DEPENDENCIES
@@ -873,6 +890,7 @@ install(TARGETS supercell-wx
           DESTINATION Frameworks
           COMPONENT supercell-wx
           OPTIONAL)
+endif()
 
 # NO_TRANSLATIONS is needed for Qt 6.5.0 (will be fixed in 6.5.1)
 # https://bugreports.qt.io/browse/QTBUG-112204

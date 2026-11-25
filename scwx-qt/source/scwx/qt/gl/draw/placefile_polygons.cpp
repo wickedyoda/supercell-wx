@@ -7,7 +7,9 @@
 
 #include <boost/container/stable_vector.hpp>
 
-#if !defined(__APPLE__)
+#if defined(__ANDROID__)
+#   include <glu_tess.h>
+#elif !defined(__APPLE__)
 #   include <GL/glu.h>
 #else
 #   include <OpenGL/glu.h>

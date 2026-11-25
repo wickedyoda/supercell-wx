@@ -3,7 +3,7 @@
 // Lower the default precision to medium
 precision mediump float;
 
-uniform sampler1D uTexture;
+uniform sampler2D uTexture;
 uniform uint uDataMomentOffset;
 uniform float uDataMomentScale;
 
@@ -23,5 +23,5 @@ void main()
       texCoord = texCoord - float(cfpMoment - 8u) / 2.0f;
    }
 
-   fragColor = texture(uTexture, texCoord);
+   fragColor = texture(uTexture, vec2(texCoord.x, 0.5));
 }

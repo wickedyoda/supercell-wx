@@ -99,7 +99,7 @@ bool SelectFilePage::validatePage()
          // File does not exist
          logger_->warn("File does not exist: {}", importFilename);
          QMessageBox::critical(
-            this, title, tr("File does not exist:\n\n%1").arg(importFilename));
+            this, title, tr("File does not exist:\n\n%1").arg(QString::fromStdString(importFilename)));
          return false;
       }
 
@@ -110,7 +110,7 @@ bool SelectFilePage::validatePage()
          QMessageBox::critical(
             this,
             title,
-            tr("Selection was not a valid file:\n\n%1").arg(importFilename));
+            tr("Selection was not a valid file:\n\n%1").arg(QString::fromStdString(importFilename)));
          return false;
       }
 
@@ -123,7 +123,7 @@ bool SelectFilePage::validatePage()
          QMessageBox::critical(
             this,
             title,
-            tr("File is not a valid ZIP archive:\n\n%1").arg(importFilename));
+            tr("File is not a valid ZIP archive:\n\n%1").arg(QString::fromStdString(importFilename)));
          return false;
       }
 
@@ -153,7 +153,7 @@ bool SelectFilePage::validatePage()
             this,
             title,
             tr("Archive does not contain any settings:\n\n%1")
-               .arg(importFilename));
+               .arg(QString::fromStdString(importFilename)));
          return false;
       }
    }
@@ -161,7 +161,7 @@ bool SelectFilePage::validatePage()
    {
       logger_->error("Error opening file: {}, {}", importFilename, ex.what());
       QMessageBox::critical(
-         this, title, tr("Error opening file:\n\n%1").arg(importFilename));
+         this, title, tr("Error opening file:\n\n%1").arg(QString::fromStdString(importFilename)));
       return false;
    }
 

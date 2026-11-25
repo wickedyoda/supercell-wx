@@ -146,18 +146,21 @@ void ColorTableLayer::Render(
       p->colorTable_ = radarProductView->color_table_lut();
 
       glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_1D, p->texture_);
-      glTexImage1D(GL_TEXTURE_1D,
+      // OpenGL ES has no 1D textures: upload the color table as an Nx1 2D
+      // texture, which behaves identically on both desktop GL and GLES
+      glBindTexture(GL_TEXTURE_2D, p->texture_);
+      glTexImage2D(GL_TEXTURE_2D,
                    0,
                    GL_RGBA,
                    (GLsizei) p->colorTable_.size(),
+                   1,
                    0,
                    GL_RGBA,
                    GL_UNSIGNED_BYTE,
                    p->colorTable_.data());
-      glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glGenerateMipmap(GL_TEXTURE_1D);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glGenerateMipmap(GL_TEXTURE_2D);
    }
 
    if (p->colorTable_.size() > 0 && radarProductView->sweep_time() !=

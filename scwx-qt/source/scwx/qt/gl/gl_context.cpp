@@ -57,10 +57,16 @@ void GlContext::Impl::InitializeGL()
       return;
    }
 
+#if defined(__ANDROID__)
+   const int gladVersion = gladLoaderLoadGLES2();
+   const char* gladLoaderName = "gladLoaderLoadGLES2";
+#else
    const int gladVersion = gladLoaderLoadGL();
+   const char* gladLoaderName = "gladLoaderLoadGL";
+#endif
    if (!gladVersion)
    {
-      logger_->error("gladLoaderLoadGL failed");
+      logger_->error("{} failed", gladLoaderName);
 
       QMessageBox::critical(
          nullptr, "Supercell Wx", "Unable to initialize OpenGL");
@@ -86,10 +92,19 @@ void GlContext::Impl::InitializeGL()
    glGetIntegerv(GL_MAJOR_VERSION, &major);
    glGetIntegerv(GL_MINOR_VERSION, &minor);
 
-   if (major < 3 || (major == 3 && minor < 3) || !GLAD_GL_VERSION_3_3)
+#if defined(__ANDROID__)
+   const bool glSupported = (major > 3 || (major == 3 && minor >= 0)) &&
+                            GLAD_GL_ES_VERSION_3_0;
+   const char* glRequirement = "OpenGL ES 3.0 or greater";
+#else
+   const bool glSupported = !(major < 3 || (major == 3 && minor < 3)) &&
+                            GLAD_GL_VERSION_3_3;
+   const char* glRequirement = "OpenGL 3.3 or greater";
+#endif
+   if (!glSupported)
    {
       logger_->error(
-         "OpenGL 3.3 or greater is required, found {}.{}", major, minor);
+         "{} is required, found {}.{}", glRequirement, major, minor);
 
       QMessageBox::critical(
          nullptr,

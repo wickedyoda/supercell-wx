@@ -45,17 +45,14 @@ set(MLN_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/maplibre-native/include
                      ${CMAKE_CURRENT_SOURCE_DIR}/maplibre-native-qt/src/core/include
                      ${CMAKE_CURRENT_BINARY_DIR}/maplibre-native-qt/src/core/include PARENT_SCOPE)
 
-set_target_properties(test_mln_core PROPERTIES EXCLUDE_FROM_ALL True)
-set_target_properties(test_mln_widgets PROPERTIES EXCLUDE_FROM_ALL True)
-set_target_properties(MLNQtWidgets PROPERTIES EXCLUDE_FROM_ALL True)
-
-set_target_properties(test_mln_core PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD True)
-set_target_properties(test_mln_widgets PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD True)
-set_target_properties(MLNQtWidgets PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD True)
-
-set_target_properties(test_mln_core PROPERTIES FOLDER mln/exclude)
-set_target_properties(test_mln_widgets PROPERTIES FOLDER mln/exclude)
-set_target_properties(MLNQtWidgets PROPERTIES FOLDER mln/exclude)
+foreach(_mln_optional_target test_mln_core test_mln_widgets MLNQtWidgets)
+    if (TARGET ${_mln_optional_target})
+        set_target_properties(${_mln_optional_target} PROPERTIES EXCLUDE_FROM_ALL True)
+        set_target_properties(${_mln_optional_target} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD True)
+        set_target_properties(${_mln_optional_target} PROPERTIES FOLDER mln/exclude)
+    endif()
+endforeach()
+unset(_mln_optional_target)
 
 set_target_properties(MLNQtCore PROPERTIES FOLDER mln)
 set_target_properties(mbgl-core PROPERTIES FOLDER mln)

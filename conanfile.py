@@ -23,7 +23,6 @@ class SupercellWxConan(ConanFile):
                   "re2/20251105",
                   "spdlog/1.17.0",
                   "sqlite3/3.51.0",
-                  "vulkan-loader/1.4.313.0",
                   "zlib/1.3.1")
     generators = ("CMakeDeps")
     default_options = {"boost/*:without_cobalt" : True,
@@ -40,7 +39,11 @@ class SupercellWxConan(ConanFile):
             # onetbb requires option hwloc/*:shared=True
             self.options["hwloc"].shared      = True
         elif self.settings.os == "Android":
-            self.options["openssl"].shared    = True
+            # Static OpenSSL/libcurl for Android: Gradle only packages files
+            # ending in .so, so versioned shared objects (libssl.so.3) cannot
+            # be bundled
+            self.options["openssl"].shared    = False
+            self.options["libcurl"].shared    = False
             self.options["libcurl"].ca_bundle = "none"
             self.options["libcurl"].ca_path   = "none"
             # vulkan-loader is not available for Android; skip it
@@ -55,6 +58,11 @@ class SupercellWxConan(ConanFile):
             self.requires("opengl/system")
             self.requires("glu/system")
             self.requires("onetbb/2022.3.0")
+
+        # vulkan-loader has no Android support and nothing in the Android build
+        # links against it
+        if self.settings.os != "Android":
+            self.requires("vulkan-loader/1.4.313.0")
 
         # Force dependency graph (fontconfig) to use a newer version of freetype
         self.requires("freetype/2.14.1", force=True)

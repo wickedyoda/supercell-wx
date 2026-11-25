@@ -268,7 +268,9 @@ ZipStreamWriter::Impl::Write(void* data, zip_uint64_t len, zip_source_cmd_t cmd)
          break;
       case SEEK_END:
          rws->stream->seekp(0, std::ios::end);
-         new_offset = rws->stream->tellp() + args->offset;
+         // libc++'s fpos does not add implicitly to libzip's integer type
+         new_offset = static_cast<zip_int64_t>(rws->stream->tellp()) +
+                      args->offset;
          break;
       default:
          return -1;
