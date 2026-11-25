@@ -57,7 +57,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
           ninja-build p7zip-full libglib2.0-0t64 libdbus-1-3 libfontconfig1 \
-          libxkbcommon0 libfreetype6 patch
+          libxkbcommon0 libfreetype6 patch patchelf
 
     - name: Setup Android SDK
       run: |
@@ -189,6 +189,15 @@ jobs:
             esac
           fi
         done
+        # libssl/libcrypto keep their versioned SONAMEs inside the archives,
+        # which would not match the renamed files Gradle can package
+        if [ -f "${LIBS_DIR}/libcrypto_3.so" ]; then
+          patchelf --set-soname libcrypto_3.so "${LIBS_DIR}/libcrypto_3.so"
+        fi
+        if [ -f "${LIBS_DIR}/libssl_3.so" ]; then
+          patchelf --set-soname libssl_3.so "${LIBS_DIR}/libssl_3.so"
+          patchelf --replace-needed libcrypto.so.3 libcrypto_3.so "${LIBS_DIR}/libssl_3.so"
+        fi
         for n in libiconv.so libcharset.so; do
           src=$(find ~/.conan2 -name "$n" -type f 2>/dev/null | grep -v '/b/build' | head -1 || true)
           [ -n "$src" ] && cp -L "$src" "${LIBS_DIR}/"
@@ -265,6 +274,6 @@ jobs:
         else
           gh release create "$TAG" "$OUT" "$OUT.sha256" \
             --title "$TITLE" \
-            --notes "Android ${ANDROID_ABI} build from ${GITHUB_SHA} (Qt ${QT_VERSION}, NDK ${NDK_VERSION}, minSdk 33, targetSdk 34)." \
+            --notes "First Android build of Supercell Wx — arm64-v8a, Qt ${QT_VERSION}, NDK ${NDK_VERSION}, minSdk 33, targetSdk 34, built from ${GITHUB_SHA}. This is an early port: install it on a device and report failures via logcat tag scwx." \
             --latest=false
         fi
